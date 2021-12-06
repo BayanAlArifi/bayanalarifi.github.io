@@ -1,0 +1,939 @@
+<!DOCTYPE html>
+<head>
+    <title>Saudi Sky</title>
+    <link rel="stylesheet" href="./style.css" type="text/css" media="screen"/>
+</head>
+<meta charset="utf-8">
+<style>
+
+    .node {
+        stroke-width: 1.5px;
+    }
+
+</style>
+<body>
+
+<div id="main-wrapper">
+    <div id="clouds">
+        <div id="viewport">
+            <div id="world"></div>
+        </div>
+        <div id="options">
+            <div id="optionsContent">
+                <div id="textureControls">
+                    <ul id="textureList"></ul>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div id="sidebar">
+        <div id="current_time">12:00am</div>
+        <div class="chart-filters">
+            <div>
+                <label>السرعة</label>
+                <div id="speed">
+                    <div class="togglebutton fast" data-val="fast">سريع</div>
+                    <div class="togglebutton medium" data-val="medium">متوسط</div>
+                    <div class="togglebutton slow current" data-val="slow">بطي</div>
+                    <div class="clr"></div>
+                </div>
+            </div>
+            <!--<svg id="airplane_icon" width="50" height="50">
+                <path d="m25.21488,3.93375c-0.44355,0 -0.84275,0.18332 -1.17933,0.51592c-0.33397,0.33267 -0.61055,0.80884 -0.84275,1.40377c-0.45922,1.18911 -0.74362,2.85964 -0.89755,4.86085c-0.15655,1.99729 -0.18263,4.32223 -0.11741,6.81118c-5.51835,2.26427 -16.7116,6.93857 -17.60916,7.98223c-1.19759,1.38937 -0.81143,2.98095 -0.32874,4.03902l18.39971,-3.74549c0.38616,4.88048 0.94192,9.7138 1.42461,13.50099c-1.80032,0.52703 -5.1609,1.56679 -5.85232,2.21255c-0.95496,0.88711 -0.95496,3.75718 -0.95496,3.75718l7.53,-0.61316c0.17743,1.23545 0.28701,1.95767 0.28701,1.95767l0.01304,0.06557l0.06002,0l0.13829,0l0.0574,0l0.01043,-0.06557c0,0 0.11218,-0.72222 0.28961,-1.95767l7.53164,0.61316c0,0 0,-2.87006 -0.95496,-3.75718c-0.69044,-0.64577 -4.05363,-1.68813 -5.85133,-2.21516c0.48009,-3.77545 1.03061,-8.58921 1.42198,-13.45404l18.18207,3.70115c0.48009,-1.05806 0.86881,-2.64965 -0.32617,-4.03902c-0.88969,-1.03062 -11.81147,-5.60054 -17.39409,-7.89352c0.06524,-2.52287 0.04175,-4.88024 -0.1148,-6.89989l0,-0.00476c-0.15655,-1.99844 -0.44094,-3.6683 -0.90277,-4.8561c-0.22699,-0.59493 -0.50356,-1.07111 -0.83754,-1.40377c-0.33658,-0.3326 -0.73578,-0.51592 -1.18194,-0.51592l0,0l-0.00001,0l0,0l0.00002,0.00001z"
+                      stroke-width="0" fill="white"/>
+            </svg>-->
+            <div>
+                <label> عدد الرحلات </label>
+                <div id="total_flights">0</div>
+            </div>
+        </div>
+    </div>
+    <div id="chart">
+    </div>
+</div>
+
+<script src="./d3-3-5-5.min.js"></script>
+<script src="./Draggable.min.js"></script>
+<script src="./gsap.min.js"></script>
+<script src="./slider.js"></script>
+
+<!-- 3D Clouds Background -->
+<script>
+
+    (function () {
+        var lastTime = 0;
+        var vendors = ["ms", "moz", "webkit", "o"];
+        for (
+            var x = 0;
+            x < vendors.length && !window.requestAnimationFrame;
+            ++x
+        ) {
+            window.requestAnimationFrame =
+                window[vendors[x] + "RequestAnimationFrame"];
+            window.cancelRequestAnimationFrame =
+                window[vendors[x] + "CancelRequestAnimationFrame"];
+        }
+
+        if (!window.requestAnimationFrame)
+            window.requestAnimationFrame = function (callback, element) {
+                var currTime = new Date().getTime();
+                var timeToCall = Math.max(0, 16 - (currTime - lastTime));
+                var id = window.setTimeout(function () {
+                    callback(currTime + timeToCall);
+                }, timeToCall);
+                lastTime = currTime + timeToCall;
+                return id;
+            };
+
+        if (!window.cancelAnimationFrame)
+            window.cancelAnimationFrame = function (id) {
+                clearTimeout(id);
+            };
+    })();
+
+    var layers = [],
+        objects = [],
+        textures = [],
+        world = document.getElementById("world"),
+        viewport = document.getElementById("viewport"),
+        d = 0,
+        p = 400,
+        worldXAngle = 0,
+        worldYAngle = 0,
+        computedWeights = [];
+
+    var links = document.querySelectorAll("a[rel=external]");
+    for (var j = 0; j < links.length; j++) {
+        var a = links[j];
+        a.addEventListener(
+            "click",
+            function (e) {
+                window.open(this.href, "_blank");
+                e.preventDefault();
+            },
+            false
+        );
+    }
+
+    viewport.style.webkitPerspective = p;
+    viewport.style.MozPerspective = p + "px";
+    viewport.style.oPerspective = p;
+    viewport.style.perspective = p;
+
+    textures = [
+        { name: "white cloud", file: "cloud.png", opacity: 1, weight: 0 },
+    ];
+
+    var el = document.getElementById("textureList");
+    for (var j = 0; j < textures.length; j++) {
+        var li = document.createElement("li");
+        var span = document.createElement("span");
+        span.textContent = textures[j].name;
+        var div = document.createElement("div");
+        div.className = "buttons";
+        var btnNone = document.createElement("a");
+        btnNone.setAttribute("id", "btnNone" + j);
+        btnNone.setAttribute("href", "#");
+        btnNone.textContent = "None";
+        btnNone.className = "left button";
+        var btnFew = document.createElement("a");
+        btnFew.setAttribute("id", "btnFew" + j);
+        btnFew.setAttribute("href", "#");
+        btnFew.textContent = "A few";
+        btnFew.className = "middle button";
+        var btnNormal = document.createElement("a");
+        btnNormal.setAttribute("id", "btnNormal" + j);
+        btnNormal.setAttribute("href", "#");
+        btnNormal.textContent = "Some";
+        btnNormal.className = "middle button";
+        var btnLot = document.createElement("a");
+        btnLot.setAttribute("id", "btnLot" + j);
+        btnLot.setAttribute("href", "#");
+        btnLot.textContent = "A lot";
+        btnLot.className = "right button";
+
+        (function (id) {
+            btnNone.addEventListener("click", function () {
+                setTextureUsage(id, "None");
+            });
+            btnFew.addEventListener("click", function () {
+                setTextureUsage(id, "Few");
+            });
+            btnNormal.addEventListener("click", function () {
+                setTextureUsage(id, "Normal");
+            });
+            btnLot.addEventListener("click", function () {
+                setTextureUsage(id, "Lot");
+            });
+        })(j);
+
+        li.appendChild(span);
+        div.appendChild(btnNone);
+        div.appendChild(btnFew);
+        div.appendChild(btnNormal);
+        div.appendChild(btnLot);
+        li.appendChild(div);
+        el.appendChild(li);
+
+        setTextureUsage(j, "None");
+    }
+
+    setTextureUsage(0, "Lot");
+    generate();
+
+    document
+        .getElementById("cloudsPreset")
+        .addEventListener("click", function (e) {
+            setTextureUsage(0, "Lot");
+            setTextureUsage(1, "None");
+            setTextureUsage(2, "None");
+            setTextureUsage(3, "None");
+            setTextureUsage(4, "None");
+            setTextureUsage(5, "None");
+            generate();
+            e.preventDefault();
+        });
+
+    function setTextureUsage(id, mode) {
+        var modes = ["None", "Few", "Normal", "Lot"];
+        var weights = { None: 0, Few: 0.3, Normal: 0.7, Lot: 1 };
+        for (var j = 0; j < modes.length; j++) {
+            var el = document.getElementById("btn" + modes[j] + id);
+            el.className = el.className.replace(" active", "");
+            if (modes[j] == mode) {
+                el.className += " active";
+                textures[id].weight = weights[mode];
+            }
+        }
+    }
+
+    var optionsContent = document.getElementById("optionsContent");
+    var el = document
+        .getElementById("closeBtn")
+        .addEventListener("click", function (e) {
+            if (optionsContent.style.display != "block") {
+                optionsContent.style.display = "block";
+            } else {
+                optionsContent.style.display = "none";
+            }
+            e.preventDefault();
+        });
+
+    var textureControls = document.getElementById("textureControls");
+    var el = document
+        .getElementById("showTextureControlsBtn")
+        .addEventListener("click", function (e) {
+            if (textureControls.style.display != "block") {
+                textureControls.style.display = "block";
+            } else {
+                textureControls.style.display = "none";
+            }
+            e.preventDefault();
+        });
+
+    function createCloud() {
+        var div = document.createElement("div");
+        div.className = "cloudBase";
+        var x = 256 - Math.random() * 512;
+        var y = 256 - Math.random() * 512;
+        var z = 256 - Math.random() * 512;
+        var t =
+            "translateX( " +
+            x +
+            "px ) translateY( " +
+            y +
+            "px ) translateZ( " +
+            z +
+            "px )";
+        div.style.webkitTransform = div.style.MozTransform = div.style.oTransform = div.style.transform = t;
+        world.appendChild(div);
+
+        for (var j = 0; j < 5 + Math.round(Math.random() * 10); j++) {
+            var cloud = document.createElement("img");
+            cloud.style.opacity = 0;
+            var r = Math.random();
+            var src = "troll.png";
+            for (var k = 0; k < computedWeights.length; k++) {
+                if (r >= computedWeights[k].min && r <= computedWeights[k].max) {
+                    (function (img) {
+                        img.addEventListener("load", function () {
+                            img.style.opacity = 0.8;
+                        });
+                    })(cloud);
+                    src = computedWeights[k].src;
+                }
+            }
+            if (computedWeights.length === 0) {
+                cloud.style.opacity = 0.8;
+            }
+            cloud.setAttribute("src", src);
+            cloud.className = "cloudLayer";
+
+            var x = 256 - Math.random() * 512;
+            var y = 256 - Math.random() * 512;
+            var z = 100 - Math.random() * 200;
+            var a = Math.random() * 360;
+            var s = 0.25 + Math.random();
+            x *= 0.2;
+            y *= 0.2;
+            cloud.data = {
+                x: x,
+                y: y,
+                z: z,
+                a: a,
+                s: s,
+                speed: 0.1 * Math.random(),
+            };
+            var t =
+                "translateX( " +
+                x +
+                "px ) translateY( " +
+                y +
+                "px ) translateZ( " +
+                z +
+                "px ) rotateZ( " +
+                a +
+                "deg ) scale( " +
+                s +
+                " )";
+            cloud.style.webkitTransform = cloud.style.MozTransform = cloud.style.oTransform = cloud.style.transform = t;
+
+            div.appendChild(cloud);
+            layers.push(cloud);
+        }
+
+        return div;
+    }
+
+    window.addEventListener("mousewheel", onContainerMouseWheel);
+    window.addEventListener("DOMMouseScroll", onContainerMouseWheel);
+
+    document
+        .getElementById("generateBtn")
+        .addEventListener("click", function (e) {
+            generate();
+            e.preventDefault();
+        });
+
+    window.addEventListener("keydown", function (e) {
+        if (e.keyCode == 32) generate();
+    });
+
+    window.addEventListener("mousemove", function (e) {
+        worldYAngle = -(0.5 - e.clientX / window.innerWidth) * 180;
+        worldXAngle = (0.5 - e.clientY / window.innerHeight) * 180;
+        //worldXAngle = .1 * ( e.clientY - .5 * window.innerHeight );
+        //worldYAngle = .1 * ( e.clientX - .5 * window.innerWidth );
+        updateView();
+    });
+
+    window.addEventListener("touchmove", function (e) {
+        var ptr = e.changedTouches.length;
+        while (ptr--) {
+            var touch = e.changedTouches[ptr];
+            worldYAngle = -(0.5 - touch.pageX / window.innerWidth) * 180;
+            worldXAngle = (0.5 - touch.pageY / window.innerHeight) * 180;
+            updateView();
+        }
+        e.preventDefault();
+    });
+
+    function generate() {
+        objects = [];
+        if (world.hasChildNodes()) {
+            while (world.childNodes.length >= 1) {
+                world.removeChild(world.firstChild);
+            }
+        }
+        computedWeights = [];
+        var total = 0;
+        for (var j = 0; j < textures.length; j++) {
+            if (textures[j].weight > 0) {
+                total += textures[j].weight;
+            }
+        }
+        var accum = 0;
+        for (var j = 0; j < textures.length; j++) {
+            if (textures[j].weight > 0) {
+                var w = textures[j].weight / total;
+                computedWeights.push({
+                    src: textures[j].file,
+                    min: accum,
+                    max: accum + w,
+                });
+                accum += w;
+            }
+        }
+        for (var j = 0; j < 5; j++) {
+            objects.push(createCloud());
+        }
+    }
+
+    function updateView() {
+        var t =
+            "translateZ( " +
+            d +
+            "px ) rotateX( " +
+            worldXAngle +
+            "deg) rotateY( " +
+            worldYAngle +
+            "deg)";
+        world.style.webkitTransform = world.style.MozTransform = world.style.oTransform = world.style.transform = t;
+    }
+
+    function onContainerMouseWheel(event) {
+        event = event ? event : window.event;
+        d = d - (event.detail ? event.detail * -5 : event.wheelDelta / 8);
+        updateView();
+    }
+
+    function orientationhandler(e) {
+        if (!e.gamma && !e.beta) {
+            e.gamma = -(e.x * (180 / Math.PI));
+            e.beta = -(e.y * (180 / Math.PI));
+        }
+
+        var x = e.gamma;
+        var y = e.beta;
+
+        worldXAngle = y;
+        worldYAngle = x;
+        updateView();
+    }
+
+    function update() {
+        for (var j = 0; j < layers.length; j++) {
+            var layer = layers[j];
+            layer.data.a += layer.data.speed;
+            var t =
+                "translateX( " +
+                layer.data.x +
+                "px ) translateY( " +
+                layer.data.y +
+                "px ) translateZ( " +
+                layer.data.z +
+                "px ) rotateY( " +
+                -worldYAngle +
+                "deg ) rotateX( " +
+                -worldXAngle +
+                "deg ) rotateZ( " +
+                layer.data.a +
+                "deg ) scale( " +
+                layer.data.s +
+                ")";
+            layer.style.webkitTransform = layer.style.MozTransform = layer.style.oTransform = layer.style.transform = t;
+            //layer.style.webkitFilter = 'blur(5px)';
+        }
+
+        requestAnimationFrame(update);
+    }
+
+    update();    </script>
+
+<!-- Moving Bubbles Chart -->
+<script>
+    var searchParams = new URLSearchParams(window.location.search);
+    var THEME = searchParams.get("theme") ? searchParams.get("theme") : "blue";
+    document.body.className = THEME
+    let filtersValues = [
+        "male",
+        "saudi",
+        50
+    ]
+    document.body.className = THEME
+    fetch("./themes.json").then(response => response.json())
+        .then(data => {
+            THEME = data[THEME]
+        });
+    var USER_SPEED = "slow"; // default speed
+    var TIME;
+
+    var width = 780,
+        height = 800,
+        padding = 1,
+        maxRadius = 3;
+    // color = d3.scale.category10();
+
+    var sched_objs = [],
+        curr_minute = 0;
+
+    var act_codes = [
+        {"index": "0", "short": "الجو", "desc": "الجو"},
+        {"index": "1", "short": "مطار 2", "desc": "مطار الأمير سلطان بن عبد العزيز"}, // TUU
+        {"index": "2", "short": "مطار 3", "desc": "مطار الأمير نايف بن عبد العزيز"}, // ELQ
+        {"index": "3", "short": "مطار 4", "desc": "مطار الأمير محمد بن عبد العزيز"}, // MED
+        {"index": "4", "short": "مطار 5", "desc": "مطار الجوف"}, // AJF
+        {"index": "5", "short": "مطار 6", "desc": "مطار أبها"}, // AHB
+        {"index": "6", "short": "مطار 7", "desc": "مطار حائل"}, // HAS
+        {"index": "7", "short": "مطار 8", "desc": "مطار الملك فهد"}, // DMM
+        {"index": "8", "short": "مطار 9", "desc": "مطار الملك عبدالعزيز"}, // JED
+        {"index": "9", "short": "مطار 1", "desc": "مطار الحدود الشمالية"}, // RAH
+    ];
+    var act_counts;
+    var nodes;
+    var force;
+    var circle;
+    var label;
+    var label1;
+
+    var speeds = {"slow": 2000, "medium": 1000, "fast": 500};
+
+    var notes_index = 0;
+
+
+    function resetData() {
+        clearInterval(TIME)
+        // USER_SPEED = "slow";
+        svg.selectAll("circle")
+            .remove();
+        svg.selectAll(".actlabel1").selectAll("tspan")
+            .text(function (d) {
+                return "0%";
+            });
+        sched_objs = [],
+            act_counts = {"0": 0, "1": 0, "2": 0, "3": 0, "4": 0, "5": 0, "6": 0, "7": 0, "8": 0, "9": 0};
+        curr_minute = 0;
+        d3.csv(`./data/testing.csv`, function (error, data) {
+            data.forEach(function (d) {
+                var day_array = d.path.split(",");
+                var activities = [];
+                for (var i = 0; i < day_array.length; i++) {
+                    // Duration
+                    if (i % 2 == 1) {
+                        if (day_array[i - 1] < 5) {
+                            activities.push({'act': day_array[i - 1], 'duration': +day_array[i]});
+                        }
+                    }
+                }
+                sched_objs.push(activities);
+            });
+
+            nodes = sched_objs.map(function (o, i) {
+
+                var act = o[0].act;
+                act_counts[act] += 1;
+                var init_x = foci[act].x + Math.random();
+                var init_y = foci[act].y + Math.random();
+                return {
+                    act: act,
+                    radius: 4,
+                    x: init_x,
+                    y: init_y,
+                    color: color(act),
+                    moves: 0,
+                    next_move_time: o[0].duration,
+                    sched: o,
+                }
+            });
+
+            force = d3.layout.force()
+                .nodes(nodes)
+                .size([width, height])
+                // .links([])
+                .gravity(0)
+                .charge(0)
+                .friction(.9)
+                .on("tick", tick)
+                .start();
+
+            // add some actual circles to the SVG object. Placement and color is based on nodes.
+            circle = svg.selectAll("circle")
+                .data(nodes)
+                .enter().insert("circle", "text")
+                .attr("r", function (d) {
+                    return d.radius;
+                })
+                .style("fill", function (d) {
+                    return d.color;
+                });
+            // .call(force.drag);
+            curr_minute -= 60;
+            timer()
+        });
+    }
+
+    // Activity to put in center of circle arrangement
+    var center_act = "الجو",
+        center_pt = {"x": 380, "y": 365};
+
+
+    // Coordinates for activities
+    var foci = {};
+    act_codes.forEach(function (code, i) {
+        if (code.desc == center_act) {
+            foci[code.index] = center_pt;
+        } else {
+            var theta = 2 * Math.PI / (act_codes.length - 1);
+            foci[code.index] = {x: 250 * Math.cos(i * theta) + 380, y: 250 * Math.sin(i * theta) + 365};
+        }
+    });
+
+
+    // Start the SVG
+    var svg = d3.select("#chart").append("svg")
+        .attr("direction", "rtl")
+        .attr("lang", "ar")
+        .attr("width", width)
+        .attr("height", height);
+
+
+    // Load data and let's do it.
+    d3.csv(`./data/testing.csv`, function (error, data) {
+
+        data.forEach(function (d) {
+            var day_array = d.path.split(",");
+            var activities = [];
+            for (var i = 0; i < day_array.length; i++) {
+                // Duration
+                if (i % 2 == 1) {
+                    // 14 regions (positions)
+                    if (day_array[i - 1] < 14) {
+                        activities.push({'act': day_array[i - 1], 'duration': +day_array[i]});
+                    }
+                }
+            }
+            sched_objs.push(activities);
+        });
+
+        // Used for percentages by minute
+        act_counts = {"0": 0, "1": 0, "2": 0, "3": 0, "4": 0, "5": 0, "6": 0, "7": 0, "8": 0, "9": 0};
+
+        // A node for each person's schedule
+        nodes = sched_objs.map(function (o, i) {
+
+            var act = o[0].act;
+            act_counts[act] += 1;
+            var init_x = foci[act].x + Math.random();
+            var init_y = foci[act].y + Math.random();
+            return {
+                act: act,
+                radius: 4,
+                x: init_x,
+                y: init_y,
+                color: color(act),
+                moves: 0,
+                next_move_time: o[0].duration,
+                sched: o,
+            }
+        });
+
+        force = d3.layout.force()
+            .nodes(nodes)
+            .size([width, height])
+            // .links([])
+            .gravity(0)
+            .charge(0)
+            .friction(.9)
+            .on("tick", tick)
+            .start();
+
+        // add some actual circles to the SVG object. Placement and color is based on nodes.
+        circle = svg.selectAll("circle")
+            .data(nodes)
+            .enter().append("circle")
+            .attr("r", function (d) {
+                return d.radius;
+            })
+            .style("fill", function (d) {
+                return d.color;
+            });
+        // .call(force.drag);
+
+        // Activity labels
+        label = svg.selectAll("text")
+            .data(act_codes)
+            .enter().append("text")
+            .attr("class", "actlabel")
+            .attr("direction", "rtl")
+            .attr("x", function (d, i) {
+                if (d.desc == center_act) {
+                    return center_pt.x;
+                } else {
+                    var theta = 2 * Math.PI / (act_codes.length - 1);
+                    return 340 * Math.cos(i * theta) + 380;
+                }
+
+            })
+            .attr("y", function (d, i) {
+                if (d.desc == center_act) {
+                    return center_pt.y;
+                } else {
+                    var theta = 2 * Math.PI / (act_codes.length - 1);
+                    return 340 * Math.sin(i * theta) + 365;
+                }
+
+            });
+
+        // Activity labels
+        label1 = svg.selectAll("actlabel1")
+            .data(act_codes)
+            .enter().append("text")
+            .attr("class", "actlabel1")
+            .attr("direction", "rtl")
+            .attr("x", function (d, i) {
+                if (d.desc == center_act) {
+                    return center_pt.x;
+                } else {
+                    var theta = 2 * Math.PI / (act_codes.length - 1);
+                    return 340 * Math.cos(i * theta) + 380;
+                }
+
+            })
+            .attr("y", function (d, i) {
+                if (d.desc == center_act) {
+                    return center_pt.y;
+                } else {
+                    var theta = 2 * Math.PI / (act_codes.length - 1);
+                    return 340 * Math.sin(i * theta) + 365;
+                }
+
+            });
+
+        label.append("tspan")
+            .attr("x", function () {
+                return d3.select(this.parentNode).attr("x");
+            })
+            // .attr("dy", "1.3em")
+            .attr("direction", "rtl")
+            .attr("text-anchor", "middle")
+            .text(function (d) {
+                return d.short;
+            });
+        label1.append("tspan")
+            .attr("dy", "1.5em")
+            .attr("direction", "rtl")
+            .attr("x", function () {
+                return d3.select(this.parentNode).attr("x");
+            })
+            .attr("text-anchor", "middle")
+            .attr("class", "actpct1")
+            .attr("font-size", "1.2em")
+            .text(function (d) {
+                return readablePercent(act_counts[d.index]);
+            });
+
+    }); // @end d3.tsv
+
+    // Update nodes based on activity and duration
+    // a choice is randomly selected and then you change a random node to that choice. You resume() the force to set the circles moving again (they eventually settle in a spot otherwise). At the end of the function, setTimeout() is called again to schedule the next call.
+    function timer() {
+        d3.range(nodes.length).map(function (i) {
+            var curr_node = nodes[i],
+                curr_moves = curr_node.moves;
+
+            // Time to go to next activity
+            if (curr_node.next_move_time == curr_minute) {
+                if (curr_node.moves == curr_node.sched.length - 1) {
+                    curr_moves = 0;
+                } else {
+                    curr_moves += 1;
+                }
+
+                // Subtract from current activity count
+                act_counts[curr_node.act] -= 1;
+
+                // Move on to next activity
+                curr_node.act = curr_node.sched[curr_moves].act;
+
+                // Add to new activity count
+                act_counts[curr_node.act] += 1;
+
+                curr_node.moves = curr_moves;
+                curr_node.cx = foci[curr_node.act].x;
+                curr_node.cy = foci[curr_node.act].y;
+
+                nodes[i].next_move_time += nodes[i].sched[curr_node.moves].duration;
+            }
+        });
+
+        force.resume();
+        curr_minute += 60; // 60 if it moves on an hourly basis
+
+        // Update percentages
+        label1.selectAll("tspan.actpct1")
+            .text(function (d) {
+                return readablePercent(act_counts[d.index]);
+            });
+
+        // Update time
+        var true_minute = curr_minute % 1440;
+        d3.select("#current_time").text(minutesToTime(true_minute));
+
+        // Update number of flights and travelers indicators
+        d3.select("#total_flights").text(act_counts[0])
+        console.log("flights = "+act_counts[0]) // act_counts[13] is number of bubbles at region 13
+
+        // Update notes
+        // var true_minute = curr_minute % 1440;
+        // if (true_minute == time_notes[notes_index].start_minute) {
+        //     d3.select("#note")
+        //         .style("top", "0px")
+        //         .transition()
+        //         .duration(600)
+        //         .style("top", "20px")
+        //         .style("color", "#000000")
+        //         .text(time_notes[notes_index].note);
+        // }
+
+        // Make note disappear at the end.
+        // else if (true_minute == time_notes[notes_index].stop_minute) {
+        //
+        //     d3.select("#note").transition()
+        //         .duration(1000)
+        //         .style("top", "300px")
+        //         .style("color", "#ffffff");
+        //
+        //     notes_index += 1;
+        //     if (notes_index == time_notes.length) {
+        //         notes_index = 0;
+        //     }
+        // }
+        //
+
+        TIME = setTimeout(timer, speeds[USER_SPEED]);
+    }
+
+    TIME = setTimeout(timer, speeds[USER_SPEED]);
+
+    // runs continuously on loop, changing the position and color of circles as necessary.
+    function tick(e) {
+        // console.log(e)
+        var k = 0.04 * e.alpha;
+
+        // Push nodes toward their designated focus.
+        nodes.forEach(function (o, i) {
+            var curr_act = o.act;
+
+            // Make sleep more sluggish moving.
+            if (curr_act == "0") {
+                var damper = 0.6;
+            } else {
+                var damper = 1;
+            }
+            o.color = color(curr_act);
+            o.y += (foci[curr_act].y - o.y) * k * damper;
+            o.x += (foci[curr_act].x - o.x) * k * damper;
+        });
+
+        circle
+            .each(collide(.5))
+            .style("fill", function (d) {
+                return d.color;
+            })
+            .attr("cx", function (d) {
+                return d.x;
+            })
+            .attr("cy", function (d) {
+                return d.y;
+            });
+    }
+
+
+    // Resolve collisions between nodes, i.e. provides a force that ensures circles don’t overlap. They bounce against each other instead.
+    function collide(alpha) {
+        var quadtree = d3.geom.quadtree(nodes);
+        return function (d) {
+            var r = d.radius + maxRadius + padding,
+                nx1 = d.x - r,
+                nx2 = d.x + r,
+                ny1 = d.y - r,
+                ny2 = d.y + r;
+            quadtree.visit(function (quad, x1, y1, x2, y2) {
+                if (quad.point && (quad.point !== d)) {
+                    var x = d.x - quad.point.x,
+                        y = d.y - quad.point.y,
+                        l = Math.sqrt(x * x + y * y),
+                        r = d.radius + quad.point.radius + (d.act !== quad.point.act) * padding;
+                    if (l < r) {
+                        l = (l - r) / l * alpha;
+                        d.x -= x *= l;
+                        d.y -= y *= l;
+                        quad.point.x += x;
+                        quad.point.y += y;
+                    }
+                }
+                return x1 > nx2 || x2 < nx1 || y1 > ny2 || y2 < ny1;
+            });
+        };
+    }
+
+
+    // Speed toggle
+    d3.selectAll(".togglebutton")
+        .on("click", function () {
+            if (d3.select(this).attr("data-val") == "slow") {
+                d3.select(".slow").classed("current", true);
+                d3.select(".medium").classed("current", false);
+                d3.select(".fast").classed("current", false);
+            } else if (d3.select(this).attr("data-val") == "medium") {
+                d3.select(".slow").classed("current", false);
+                d3.select(".medium").classed("current", true);
+                d3.select(".fast").classed("current", false);
+            } else {
+                d3.select(".slow").classed("current", false);
+                d3.select(".medium").classed("current", false);
+                d3.select(".fast").classed("current", true);
+            }
+
+            USER_SPEED = d3.select(this).attr("data-val");
+        });
+
+
+    function color(activity) {
+
+        var colorByActivity = {
+            "0": "#aaaaaa",
+            "1": "#1c8af9",
+            "2": "#51BC05",
+            "3": "#FF7F00",
+            "4": "#DB32A4",
+            "5": "#00CDF8",
+            "6": "#E63B60",
+            "7": "#8E5649",
+            "8": "#68c99e",
+            "9": "#a477c8",
+        }
+
+        return colorByActivity[activity];
+
+    }
+
+    // Output readable percent based on count.
+    function readablePercent(n) {
+
+        var pct = 100 * n / nodes.length; // number of bubbles is 141
+        //console.log(nodes.length);
+        if (pct < 1 && pct > 0) {
+            pct = "<1%";
+        } else {
+            pct = Math.round(pct) + "%";
+        }
+
+        return pct;
+    }
+
+    // Minutes to time of day. Data is minutes from 4am.
+    function minutesToTime(m) {
+        var minutes = (m + 0*60) % 1440; // 0 starts at 12 AM and 4 starts at 4 AM
+        var hh = Math.floor(minutes / 60);
+        var ampm;
+        if (hh > 12) {
+            hh = hh - 12;
+            ampm = "pm";
+        } else if (hh == 12) {
+            ampm = "pm";
+        } else if (hh == 0) {
+            hh = 12;
+            ampm = "am";
+        } else {
+            ampm = "am";
+        }
+        var mm = minutes % 60;
+        if (mm < 10) {
+            mm = "0" + mm;
+        }
+
+        return hh + ":" + mm + ampm
+    }
+
+</script>

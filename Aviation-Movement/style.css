@@ -1,0 +1,477 @@
+@import "./fonts/tajawal/Tajawal-font.css";
+@import "./slider.css";
+
+.black{
+    --background: #fff;
+    --color: #061D3C;
+    --male: 47, 95, 192;
+    --female: 142, 47, 120;
+    --saudi: 70, 186, 113;
+    --non-saudi: 186, 164, 70;
+}
+.blue{
+    --background: #061D3C;
+    --color: #fff;
+    --male: 46, 105, 175;
+    --female: 179, 47, 148;
+    --saudi: 60, 179, 110;
+    --non-saudi: 179, 135, 50;
+}
+.light{
+    --background: #fff;
+    --color: #000;
+    --male: 81, 121, 189;
+    --female: 119, 41, 154;
+    --saudi: 108, 189, 104;
+    --non-saudi: 231, 206, 48;
+}
+
+.light #sidebar {
+    border-color: rgba(0,0,0,0.1)
+}
+
+.light #speed .togglebutton {
+    border-color: rgba(0,0,0,0.2);
+}
+
+
+.light .chart-filters .icon {
+    background: rgba(0,0,0, 0.1)
+}
+
+.light .chart-filters .icon svg, .light .chart-filters .icon path{
+    fill: rgba(0,0,0, 0.5)
+}
+
+.light #current_time:before {
+    background: rgba(0, 0, 0, 0.1);
+}
+
+.light #speed .togglebutton.current {
+    background: rgba(0,0,0,0.1);
+}
+
+html, body, div, span, applet, object, iframe, h1, h2, h3, h4, h5, h6, p, blockquote, pre, a, abbr, acronym, address, big, cite, code, del, dfn, em, img, ins, kbd, q, s, samp, small, strike, strong, sub, sup, tt, var, b, u, i, center, dl, dt, dd, ol, ul, li, fieldset, form, label, legend, table, caption, tbody, tfoot, thead, tr, th, td, article, aside, canvas, details, embed, figure, figcaption, footer, header, hgroup, menu, nav, output, ruby, section, summary, time, mark, audio, video {
+    margin: 0;
+    padding: 0;
+    border: 0;
+    font-size: 100%;
+    font: inherit;
+    vertical-align: baseline;
+    font-family: "Tajawal", -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+    sans-serif;
+}
+
+article, aside, details, figcaption, figure, footer, header, hgroup, menu, nav, section {
+    display: block
+}
+
+html, body{
+    height: 100%;
+}
+
+body {
+    line-height: 1;
+    direction: rtl;
+    background: var(--background);
+    color: var(--color);
+
+    /*** Sky for Clouds Background ***/
+    -webkit-perspective: 1000;
+    -moz-perspective: 1000px;
+    -o-perspective: 1000;
+    perspective: 1000px;
+    position: absolute;
+    left: 0;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    overflow: hidden;
+    background-image: linear-gradient(
+            bottom,
+            rgb(69, 132, 180) 28%,
+            rgb(31, 71, 120) 64%
+    );
+    background-image: -o-linear-gradient(
+            bottom,
+            rgb(69, 132, 180) 28%,
+            rgb(31, 71, 120) 64%
+    );
+    background-image: -moz-linear-gradient(
+            bottom,
+            rgb(69, 132, 180) 28%,
+            rgb(31, 71, 120) 64%
+    );
+    background-image: -webkit-linear-gradient(
+            bottom,
+            rgb(69, 132, 180) 28%,
+            rgb(31, 71, 120) 64%
+    );
+    background-image: -ms-linear-gradient(
+            bottom,
+            rgb(69, 132, 180) 28%,
+            rgb(31, 71, 120) 64%
+    );
+
+    background-image: -webkit-gradient(
+            linear,
+            left bottom,
+            left top,
+            color-stop(0.28, rgb(69, 132, 180)),
+            color-stop(0.64, rgb(31, 71, 120))
+    );
+    /******** END ********/
+}
+
+/*********** 3D Clouds Background **********/
+
+/*** #viewport {
+    -webkit-perspective: 1000;
+    -moz-perspective: 1000px;
+    -o-perspective: 1000;
+    perspective: 1000px;
+    position: absolute;
+    left: 0;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    overflow: hidden;
+    background-image: linear-gradient(
+            bottom,
+            rgb(69, 132, 180) 28%,
+            rgb(31, 71, 120) 64%
+    );
+    background-image: -o-linear-gradient(
+            bottom,
+            rgb(69, 132, 180) 28%,
+            rgb(31, 71, 120) 64%
+    );
+    background-image: -moz-linear-gradient(
+            bottom,
+            rgb(69, 132, 180) 28%,
+            rgb(31, 71, 120) 64%
+    );
+    background-image: -webkit-linear-gradient(
+            bottom,
+            rgb(69, 132, 180) 28%,
+            rgb(31, 71, 120) 64%
+    );
+    background-image: -ms-linear-gradient(
+            bottom,
+            rgb(69, 132, 180) 28%,
+            rgb(31, 71, 120) 64%
+    );
+
+    background-image: -webkit-gradient(
+            linear,
+            left bottom,
+            left top,
+            color-stop(0.28, rgb(69, 132, 180)),
+            color-stop(0.64, rgb(31, 71, 120))
+    );
+}
+ */
+
+#world {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    margin-left: -256px;
+    margin-top: -256px;
+    height: 512px;
+    width: 512px;
+//border: 1px solid rgb( 255, 0, 0 );
+    -webkit-transform-style: preserve-3d;
+    -moz-transform-style: preserve-3d;
+    -o-transform-style: preserve-3d;
+    transform-style: preserve-3d;
+    pointer-events: none;
+}
+
+#world div {
+    -webkit-transform-style: preserve-3d;
+    -moz-transform-style: preserve-3d;
+    -o-transform-style: preserve-3d;
+    transform-style: preserve-3d;
+}
+
+.cloudBase {
+//border: 1px solid #ff00ff;
+    position: absolute;
+    left: 256px;
+    top: 256px;
+    width: 20px;
+    height: 20px;
+    margin-left: -10px;
+    margin-top: -10px;
+}
+
+.cloudLayer {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: 256px;
+    height: 256px;
+    margin-left: -128px;
+    margin-top: -128px;
+    -webkit-transition: opacity 0.5s ease-out;
+    -moz-transition: opacity 0.5s ease-out;
+    -o-transition: opacity 0.5s ease-out;
+    transition: opacity 0.5s ease-out;
+}
+
+.actions {
+    margin-bottom: 20px;
+}
+
+#textureList li {
+    clear: both;
+    list-style-type: none;
+    position: relative;
+    height: 35px;
+    padding-top: 10px;
+}
+
+#textureList li span {
+    text-transform: capitalize;
+}
+
+#textureList div {
+    position: absolute;
+    right: 0;
+    top: 0;
+}
+
+#textureList li a {
+    float: left;
+}
+
+#textureControls {
+    display: none;
+}
+
+#closeBtn {
+    position: absolute;
+    right: 15px;
+    top: 10px;
+}
+
+.presets {
+}
+
+.presets a {
+    float: left;
+}
+
+.nope {
+    text-decoration: line-through;
+}
+
+/****** END 3D Cloud Background *******/
+
+ol, ul {
+    list-style: none
+}
+
+blockquote, q {
+    quotes: none
+}
+
+blockquote:before, blockquote:after, q:before, q:after {
+    content: '';
+    content: none
+}
+
+table {
+    border-collapse: collapse;
+    border-spacing: 0
+}
+
+#main-wrapper {
+    font-family: inconsolata, Monaco, lucida console, Consolas, courier new;
+    font-size: 14px;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+}
+
+#sidebar {
+    width: 260px;
+    margin: 30px;
+    padding: 20px;
+    border-left: 1px solid rgba(255, 255, 255, 0.18);
+    height: calc(100% - 100px);
+    padding-left: 40px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+}
+
+#current_time {
+    color: var(--color);
+    text-align: center;
+    padding: 0.25em;
+    font-size: 50px;
+    position: relative;
+}
+
+#current_time:before {
+    content: "";
+    position: absolute;
+    top: -0.25em;
+    bottom: 0;
+    left: -0.25em;
+    right: -0.25em;
+    background: rgba(255, 255, 255, 0.2);
+    z-index: -1;
+    border-radius: 60px;
+}
+
+#chart {
+    flex: 1;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+#speed {
+    font-family: inconsolata, Monaco, lucida console, Consolas, courier new;
+    font-size: 13px;
+    text-transform: uppercase;
+    margin: 1em 0;
+    display: flex;
+    flex-direction: row-reverse;
+}
+
+#speed .togglebutton {
+    padding: 0.5em 0 ;
+    text-align: center;
+    border: 1px solid rgba(255,255,255,0.2);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    background: rgba(255,255,255,0);
+}
+
+#speed .togglebutton.current {
+    transition: 1s ease;
+    background: rgba(255,255,255,0.1);
+}
+
+#airplane_icon {
+    position: center;
+}
+
+#total_flights {
+    font-size: 50px;
+}
+
+/* #note {
+    position: relative;
+    color: #fff;
+    padding-left: 5px;
+    font-family: mercury ssm a, mercury ssm b;
+    font-style: italic;
+    font-weight: 400;
+    font-size: 14px;
+    line-height: 1.4em
+} */
+
+#cite {
+    position: absolute;
+    border-top: 1px solid #ccc;
+    padding-top: 20px;
+    top: 640px;
+    font-size: 12px;
+    line-height: 1.4em;
+    width: 259px
+}
+
+circle {
+}
+
+.line {
+    stroke-width: .1px
+}
+
+a {
+    color: #821122;
+    text-decoration: none;
+    border-bottom: 1px solid #ccc
+}
+
+a:hover {
+    border-bottom: 1px solid #821122
+}
+
+.clr {
+    clear: both
+}
+
+.actlabel{
+    font-size: 1.4em;
+    font-weight: 600
+}
+
+.actlabel, .actlabel1{
+    fill: var(--color); /* 0e2e54 */
+    z-index: 99 !important;
+}
+
+
+/**** Chart Filters ****/
+
+.chart-filters > div{
+    /*margin-bottom: 3em;*/
+}
+
+.chart-filters > div:last-of-type{
+    margin-bottom: 0;
+}
+
+.chart-filters label{
+    opacity: 0.7
+}
+
+.chart-filters > div:nth-child(2) > div, .chart-filters > div:nth-child(3) > div{
+    display: flex;
+    font-size: 1em;
+    padding-top: 0.5em;
+}
+.chart-filters > div:nth-child(2) > div > div, .chart-filters > div:nth-child(3) > div > div{
+    display: flex;
+    align-items: center;
+    margin-left: 3.25em;
+    cursor: pointer
+}
+
+.chart-filters > div:nth-child(3) > div > div{
+    display: flex;
+    align-items: center;
+    margin-left: 1.25em;
+}
+
+.chart-filters .icon{
+    height: 2.5em;
+    width: 2.5em;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.1);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-left: 0.5em;
+    transition: 0.4s ease;
+}
+
+.chart-filters .icon svg, .chart-filters .icon path{
+    fill: rgba(255,255,255, 0.5);
+    transition: 0.4s ease;
+}
+
+.field{
+    padding-top: 1em;
+}
