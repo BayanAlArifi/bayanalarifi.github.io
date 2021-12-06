@@ -1,0 +1,147 @@
+#App {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+}
+
+/* axis */
+.leftaxis {
+  color: saddlebrown;
+  font-weight: 600;
+}
+.leftaxis .domain {
+  display: none;
+}
+
+/* labels */
+.countries text.label,
+.countries text.labelBg {
+  fill: #507109;
+  font-size: 16px;
+  font-weight: bold;
+  text-anchor: end;
+  transform: translate(4px, 60px) rotate(-90deg); /* moved 2.9px to the right, and 40px down from its current position. */
+}
+.labelBg {
+  stroke-width: 4px;
+  stroke: #fff;
+  fill: #fff;
+  opacity: 0.9;
+}
+
+/* petal */
+.petels path {
+  stroke: Green;
+  stroke-width: 0.2px;
+}
+.plotab {
+  display: none;
+}
+.abMode .plotab {
+  display: block;
+}
+.abMode .flower {
+  display: none;
+}
+.countries .flowerbg {
+  pointer-events: none;
+  display: none;
+}
+.countries .nodeA,
+.countries .nodeB {
+  opacity: 0.9;
+}
+.countries.hover .flowerbg {
+  display: block;
+}
+.countries.hover .nodeA,
+.countries.hover .nodeB {
+  opacity: 1;
+  stroke: #fff;
+  stroke-width: 1px;
+  r: 9;
+}
+.countries.hover .nodeCenter {
+  opacity: 1;
+  stroke: #fff;
+  stroke-width: 1px;
+  r: 6;
+}
+.countries .bar {
+  width: 3px;
+}
+.countries.hover .bar {
+  fill: #507109 !important;
+}
+
+/* Sort Alphabetically | Rank; Display Flower | Compare */
+.switched {
+  display: inline-block;
+  position: absolute;
+  bottom: 6px;
+  right: 6px;
+  font-size: 16px;
+  color: #999;
+  z-index: 100;
+}
+.switched .alpha,
+.switched .ranked,
+.switched .flowering,
+.switched .budding {
+  cursor: pointer;
+}
+.switched .alpha:hover,
+.switched .ranked:hover,
+.switched .flowering:hover,
+.switched .budding:hover {
+  text-decoration: underline;
+}
+.switched.alpha .alpha,
+.switched.ranked .ranked,
+.switched.flowering .flowering,
+.switched.budding .budding {
+  color: darkgreen;
+}
+/* Gender legend*/
+#legend {
+  list-style: none;
+  margin: ;
+}
+#legend li {
+  float: left;
+  margin-right: 10px;
+}
+#legend span {
+  float: right;
+  width: 10px;
+  height: 10px;
+  margin: 5px;
+}
+#legend .males {
+  background-color: #188CB9;
+}
+#legend .females {
+  background-color: #B9188C;
+}
+
+/* Color Scale */
+#color-scale .legend-scale ul {
+  margin: 0;
+  padding: 0;
+  float: left;
+  list-style: none;
+}
+#color-scale .legend-scale ul li {
+  float: left;
+  width: 20px;
+  margin-top: 7px;
+  text-align: center;
+  font-size: 90%;
+  list-style: none;
+}
+#color-scale ul.legend-labels li span {
+  float: left;
+  height: 10px;
+  width: 50px;
+}
