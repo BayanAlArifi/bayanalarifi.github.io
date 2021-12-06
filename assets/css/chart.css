@@ -1,0 +1,70 @@
+@import "./fonts/tajawal/Tajawal-font.css";
+
+body {
+    font-family: "Tajawal", -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+    sans-serif;
+    background: #e8e8e8;
+}
+#main-wrapper {
+    margin: 170px auto;
+    justify-content: center;
+}
+
+#legend {
+    list-style: none;
+    margin: 10px 0px 40px 685px;
+}
+#legend li {
+    float: left;
+    margin-right: 10px;
+}
+#legend span {
+    border: 1px solid #ccc;
+    float: right;
+    width: 12px;
+    height: 12px;
+    margin: 5px;
+}
+#legend .males {
+    background-color: #0077B6;
+}
+#legend .females {
+    background-color: #FF5D8F;
+}
+/*.center {*/
+/*    background: #FF7A59;*/
+/*    width: 10px;*/
+/*    height: 10px;*/
+/*    border-radius: 50%;*/
+/*    float: right;*/
+/*    margin-right: 10px;*/
+/*}*/
+.chart {
+    margin: 0px auto;
+}
+.grp {
+    font-family: "Tajawal", -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+    sans-serif;
+}
+.grpcnt {
+    font-weight: bold;
+    font-size: 1.1em;
+}
+h1 {
+    font-size: 2em;
+    padding: 3px 0px;
+    font-weight: normal;
+    text-align: center;
+    color: dimgray;
+}
+h2 {
+    padding: 3px 0px;
+    font-weight: normal;
+    text-align: center;
+}
+text {
+    fill: #000;
+    /*    display: none;*/
+}

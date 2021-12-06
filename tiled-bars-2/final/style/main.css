@@ -1,0 +1,47 @@
+body {
+  font-family: sans-serif;
+}
+
+select {
+  width: 200px;
+  padding: 3px;
+  margin-right: 20px;
+  -webkit-border-radius: 20px;
+  -moz-border-radius: 20px;
+  border-radius: 20px;
+  font-family: Tajawal;
+}
+#menu {
+  margin-left: 270px;
+}
+
+.legend {
+  font-size: 13px;
+  fill: #555;
+}
+
+.legend rect {
+  fill: #444;
+}
+
+.title {
+  font-family: Tajawal;
+  font-size: 1.5em;
+  font-weight: bold;
+  fill: #555;
+}
+
+.axis line {
+  stroke: #eee;
+}
+
+.y.axis path {
+  display: none;
+}
+
+.y.axis text {
+  font-family: Tajawal;
+  font-size: 11px;
+  fill: #777;
+  font-weight: bold;
+}
