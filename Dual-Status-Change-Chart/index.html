@@ -1,0 +1,474 @@
+<!DOCTYPE html>
+<head>
+<meta charset="utf-8">
+<title>Status Change Moving Bubbles</title>
+<link rel="stylesheet" href="style/style.css" type="text/css" media="screen" />
+</head>
+
+<div id="main-wrapper">
+    <h1>
+        توزيع الطلاب بحسب المراحل التعليمية
+    </h1>
+	<h2 id="timecount">السنة
+        <span class="cnt">1400</span>
+        هـ
+    </h2>
+
+    <ul id="legend">
+        <li><span class="females"></span> الطالبات </li>
+        <li><span class="males"></span> الطلاب </li>
+    </ul>
+<!--    <div class="center">-->
+<!--        <span>بيان</span>-->
+<!--    </div>-->
+    <div id="labels"></div>
+    <div class="chart" id="males-chart"></div>
+    <div class="chart" id="females-chart"></div>
+    </div>
+</div>
+
+<script src="js/d3.v5.min.js"></script>
+
+<!-- male -->
+<script>
+    console.log("male-chart");
+    const males = {}; // 250 person/bubble
+    let time_so_far = 1400; // time start
+
+    // Node size and spacing.
+    const radius = 5,
+        padding = 2, // Space between nodes
+        cluster_padding = 5; // Space between nodes in different stages
+
+    // Dimensions of chart.
+    const margin = { top: 50, right: 20, bottom: 100, left: 20 },
+        width = 900 - margin.left - margin.right,
+        height = 200 - margin.top - margin.bottom;
+
+    const male_svg = d3.select("#males-chart").append("svg")
+        .attr("width", width + margin.left + margin.right)
+        .attr("height", height + margin.top + margin.bottom)
+        .append("g")
+        .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+    d3.select("#males-chart").style("width", (width+margin.left+margin.right)+"px");
+
+    // Group coordinates and meta info.
+    const male_groups = {
+        // males
+        "3": { x: width/5, y: height/2, color: "#0077B6", cnt: 0, fullname: "جامعي" },
+        "2": { x: 2*width/5, y: height/2, color: "#00B4D8", cnt: 0, fullname: "ثانوي" },
+        "1": { x: 3*width/5, y: height/2, color: "#90E0EF", cnt: 0, fullname: "متوسط" },
+        "0": { x: 4*width/5, y: height/2, color: "#CAF0F8", cnt: 0, fullname: "ابتدائي" },
+    };
+
+    // Load data.
+    const male_stages = d3.csv("data/stages_edu.csv", d3.autoType);
+
+    // Once data is loaded...
+    male_stages.then(function(data) {
+
+        // Consolidate stages by pid.
+        // The data file is one row per stage change.
+        data.forEach(d => {
+            if (d3.keys(males).includes(d.pid+"")) {
+                males[d.pid+""].push(d);
+            } else {
+                males[d.pid+""] = [d];
+            }
+        });
+
+        // Create node data.
+        var nodes = d3.keys(males).map(function(d) {
+
+            // Initialize count for each group.
+            male_groups[males[d][0].grp].cnt += 1;
+
+            return {
+                id: "node"+d,
+                x: male_groups[males[d][0].grp].x + Math.random(),
+                y: male_groups[males[d][0].grp].y + Math.random(),
+                r: radius,
+                color: male_groups[males[d][0].grp].color,
+                group: males[d][0].grp,
+                timeleft: males[d][0].duration,
+                istage: 0,
+                male_stages: males[d]
+            }
+        });
+
+        // Circle for each node.
+        const circle = male_svg.append("g")
+            .selectAll("circle")
+            .data(nodes)
+            .join("circle")
+            .attr("cx", d => d.x)
+            .attr("cy", d => d.y)
+            .attr("fill", d => d.color);
+
+        // Ease in the circles.
+        circle.transition()
+            .delay((d, i) => i * 5)
+            .duration(800)
+            .attrTween("r", d => {
+                const i = d3.interpolate(0, d.r);
+                return t => d.r = i(t);
+            });
+
+        // Group name labels
+        // male_svg.selectAll('.grp')
+        //     .data(d3.keys(male_groups))
+        //     .join("text")
+        //     .attr("class", "grp")
+        //     .attr("text-anchor", "middle")
+        //     .attr("x", d => male_groups[d].x)
+        //     .attr("y", d => -35)
+        //     .text(d => male_groups[d].fullname);
+
+        // Group counts
+        male_svg.selectAll('.grpcnt')
+            .data(d3.keys(male_groups))
+            .join("text")
+            .attr("class", "grpcnt")
+            .attr("text-anchor", "middle")
+            .attr("x", d => male_groups[d].x)
+            .attr("y", d => height) // 70
+            .text(d => male_groups[d].cnt);
+
+        // male label
+        // male_svg.selectAll('.m_label')
+        //     .data(d3.keys(male_groups))
+        //     .join("text")
+        //     .attr("class", "chart")
+        //     .attr("text-anchor", "middle")
+        //     .attr("x", d => male_groups[d].x)
+        //     .attr("y", d => height)
+        //     .text(d => "ذكر");
+
+        // Forces
+        const simulation = d3.forceSimulation(nodes)
+            .force("x", d => d3.forceX(d.x))
+            .force("y", d => d3.forceY(d.y))
+            .force("cluster", forceCluster())
+            .force("collide", forceCollide())
+            .alpha(.09)
+            .alphaDecay(0);
+
+        // Adjust position of circles.
+        simulation.on("tick", () => {
+            circle
+                .attr("cx", d => d.x)
+                .attr("cy", d => d.y)
+                .attr("fill", d => male_groups[d.group].color);
+        });
+
+        // Make time pass. Adjust node stage as necessary.
+        function timer() {
+
+            nodes.forEach(function(o,i) {
+                o.timeleft -= 1;
+                if (o.timeleft == 0 && o.istage < o.male_stages.length-1) {
+                    // Decrease count for previous group.
+                    male_groups[o.group].cnt -= 1;
+
+                    // Update current node to new group.
+                    o.istage += 1;
+                    o.group = o.male_stages[o.istage].grp;
+                    o.timeleft = o.male_stages[o.istage].duration;
+
+                    // Increment count for new group.
+                    male_groups[o.group].cnt += 1;
+                }
+            });
+
+            // Increment time.
+            //if (time_so_far < 1444)
+            time_so_far += 1;
+            d3.select("#timecount .cnt").text(time_so_far);
+
+            // Update counters.
+            male_svg.selectAll('.grpcnt').text(d => male_groups[d].cnt);
+
+            // Do it again.
+            d3.timeout(timer, 500);
+
+        } // @end timer()
+
+
+        // Start things off after a few seconds.
+        d3.timeout(timer, 2000);
+
+    });
+
+
+    // Force to increment nodes to groups.
+    function forceCluster() {
+        const strength = .15;
+        let nodes;
+
+        function force(alpha) {
+            const l = alpha * strength;
+            for (const d of nodes) {
+                d.vx -= (d.x - male_groups[d.group].x) * l;
+                d.vy -= (d.y - male_groups[d.group].y) * l;
+            }
+        }
+        force.initialize = _ => nodes = _;
+
+        return force;
+    }
+
+    // Force for collision detection.
+    function forceCollide() {
+        const alpha = 0.2; // fixed for greater rigidity!
+        const padding1 = padding; // separation between same-color nodes
+        const padding2 = cluster_padding; // separation between different-color nodes
+        let nodes;
+        let maxRadius;
+
+        function force() {
+            const quadtree = d3.quadtree(nodes, d => d.x, d => d.y);
+            for (const d of nodes) {
+                const r = d.r + maxRadius;
+                const nx1 = d.x - r, ny1 = d.y - r;
+                const nx2 = d.x + r, ny2 = d.y + r;
+                quadtree.visit((q, x1, y1, x2, y2) => {
+
+                    if (!q.length) do {
+                        if (q.data !== d) {
+                            const r = d.r + q.data.r + (d.group === q.data.group ? padding1 : padding2);
+                            let x = d.x - q.data.x, y = d.y - q.data.y, l = Math.hypot(x, y);
+                            if (l < r) {
+                                l = (l - r) / l * alpha;
+                                d.x -= x *= l, d.y -= y *= l;
+                                q.data.x += x, q.data.y += y;
+                            }
+                        }
+                    } while (q = q.next);
+                    return x1 > nx2 || x2 < nx1 || y1 > ny2 || y2 < ny1;
+                });
+            }
+        }
+
+        force.initialize = _ => maxRadius = d3.max(nodes = _, d => d.r) + Math.max(padding1, padding2);
+
+        return force;
+    }
+
+</script>
+
+<!-- female -->
+<script>
+    console.log("female-chart");
+    const females = {}; // 250 person/bubble
+    //let time_so_far = 1410; // time start
+
+    // Node size and spacing.
+    //const radius = 5,
+    //     padding = 2, // Space between nodes
+    //     cluster_padding = 5; // Space between nodes in different stages
+
+    // Dimensions of chart.
+    // const margin = { top: 50, right: 50, bottom: 70, left: 50 },
+    //     width = 900 - margin.left - margin.right,
+    //     height = 560 - margin.top - margin.bottom;
+
+    const female_svg = d3.select("#females-chart").append("svg")
+        .attr("width", width + margin.left + margin.right)
+        .attr("height", height + margin.top + margin.bottom)
+        .append("g")
+        .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+    d3.select("#females-chart").style("width", (width+margin.left+margin.right)+"px");
+
+    // Group coordinates and meta info.
+    const female_groups = {
+        "3": { x: width/5, y: height, color: "#FF5D8F", cnt: 0, fullname: "جامعي" },
+        "2": { x: 2*width/5, y: height, color: "#FF87AB", cnt: 0, fullname: "ثانوي" },
+        "1": { x: 3*width/5, y: height, color: "#FFACC5", cnt: 0, fullname: "متوسط" },
+        "0": { x: 4*width/5, y: height, color: "#FFCAD4", cnt: 0, fullname: "ابتدائي" },
+    };
+
+    // Load data.
+    const female_stages = d3.csv("data/female_edu_stages.csv", d3.autoType);
+
+    // Once data is loaded...
+    female_stages.then(function(data) {
+
+        // Consolidate stages by pid.
+        // The data file is one row per stage change.
+        data.forEach(d => {
+            if (d3.keys(females).includes(d.pid+"")) {
+                females[d.pid+""].push(d);
+            } else {
+                females[d.pid+""] = [d];
+            }
+        });
+
+        // Create node data.
+        var nodes = d3.keys(females).map(function(d) {
+
+            // Initialize count for each group.
+            female_groups[females[d][0].grp].cnt += 1;
+
+            return {
+                id: "node"+d,
+                x: female_groups[females[d][0].grp].x + Math.random(),
+                y: female_groups[females[d][0].grp].y + Math.random(),
+                r: radius,
+                color: female_groups[females[d][0].grp].color,
+                group: females[d][0].grp,
+                timeleft: females[d][0].duration,
+                istage: 0,
+                female_stages: females[d]
+            }
+        });
+
+        // Circle for each node.
+        const circle = female_svg.append("g")
+            .selectAll("circle")
+            .data(nodes)
+            .join("circle")
+            .attr("cx", d => d.x)
+            .attr("cy", d => d.y)
+            .attr("fill", d => d.color);
+
+        // Ease in the circles.
+        circle.transition()
+            .delay((d, i) => i * 5)
+            .duration(800)
+            .attrTween("r", d => {
+                const i = d3.interpolate(0, d.r);
+                return t => d.r = i(t);
+            });
+
+        // Group name labels
+        female_svg.selectAll('.grp')
+            .data(d3.keys(female_groups))
+            .join("text")
+            .attr("class", "grp")
+            .attr("text-anchor", "middle")
+            .attr("x", d => female_groups[d].x)
+            .attr("y", d => -35)
+            .text(d => female_groups[d].fullname);
+
+        // Group counts
+        female_svg.selectAll('.grpcnt')
+            .data(d3.keys(female_groups))
+            .join("text")
+            .attr("class", "grpcnt")
+            .attr("text-anchor", "middle")
+            .attr("x", d => female_groups[d].x)
+            .attr("y", d => height) // 50
+            .text(d => female_groups[d].cnt);
+
+        // Forces
+        const simulation = d3.forceSimulation(nodes)
+            .force("x", d => d3.forceX(d.x))
+            .force("y", d => d3.forceY(d.y))
+            .force("cluster", forceCluster())
+            .force("collide", forceCollide())
+            .alpha(.09)
+            .alphaDecay(0);
+
+        // Adjust position of circles.
+        simulation.on("tick", () => {
+            circle
+                .attr("cx", d => d.x)
+                .attr("cy", d => d.y)
+                .attr("fill", d => female_groups[d.group].color);
+        });
+
+        // Make time pass. Adjust node stage as necessary.
+        function timer() {
+
+            nodes.forEach(function(o,i) {
+                o.timeleft -= 1;
+                if (o.timeleft == 0 && o.istage < o.female_stages.length-1) {
+                    // Decrease count for previous group.
+                    female_groups[o.group].cnt -= 1;
+
+                    // Update current node to new group.
+                    o.istage += 1;
+                    o.group = o.female_stages[o.istage].grp;
+                    o.timeleft = o.female_stages[o.istage].duration;
+
+                    // Increment count for new group.
+                    female_groups[o.group].cnt += 1;
+                }
+            });
+
+            // Increment time.
+            //time_so_far += 1;
+            //d3.select("#timecount .cnt").text(time_so_far);
+
+            // Update counters.
+            female_svg.selectAll('.grpcnt').text(d => female_groups[d].cnt);
+
+            // Do it again.
+            d3.timeout(timer, 500);
+
+        } // @end timer()
+
+
+        // Start things off after a few seconds.
+        d3.timeout(timer, 2000);
+
+    });
+
+
+    // Force to increment nodes to groups.
+    function forceCluster() {
+        const strength = .15;
+        let nodes;
+
+        function force(alpha) {
+            const l = alpha * strength;
+            for (const d of nodes) {
+                d.vx -= (d.x - female_groups[d.group].x) * l;
+                d.vy -= (d.y - female_groups[d.group].y) * l;
+            }
+        }
+        force.initialize = _ => nodes = _;
+
+        return force;
+    }
+
+    // Force for collision detection.
+    function forceCollide() {
+        const alpha = 0.2; // fixed for greater rigidity!
+        const padding1 = padding; // separation between same-color nodes
+        const padding2 = cluster_padding; // separation between different-color nodes
+        let nodes;
+        let maxRadius;
+
+        function force() {
+            const quadtree = d3.quadtree(nodes, d => d.x, d => d.y);
+            for (const d of nodes) {
+                const r = d.r + maxRadius;
+                const nx1 = d.x - r, ny1 = d.y - r;
+                const nx2 = d.x + r, ny2 = d.y + r;
+                quadtree.visit((q, x1, y1, x2, y2) => {
+
+                    if (!q.length) do {
+                        if (q.data !== d) {
+                            const r = d.r + q.data.r + (d.group === q.data.group ? padding1 : padding2);
+                            let x = d.x - q.data.x, y = d.y - q.data.y, l = Math.hypot(x, y);
+                            if (l < r) {
+                                l = (l - r) / l * alpha;
+                                d.x -= x *= l, d.y -= y *= l;
+                                q.data.x += x, q.data.y += y;
+                            }
+                        }
+                    } while (q = q.next);
+                    return x1 > nx2 || x2 < nx1 || y1 > ny2 || y2 < ny1;
+                });
+            }
+        }
+
+        force.initialize = _ => maxRadius = d3.max(nodes = _, d => d.r) + Math.max(padding1, padding2);
+
+        return force;
+    }
+
+</script>
